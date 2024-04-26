@@ -1,0 +1,74 @@
+version: '3'
+
+services:
+  neo4j:
+    build:
+      context: ./neo4j
+      dockerfile: Dockerfile
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    volumes:
+      - ./neo4j/conf:/var/lib/neo4j/conf
+      - ./neo4j/import:/var/lib/neo4j/import
+      - neo4j_data:/var/lib/neo4j/data
+      - neo4j_logs:/var/lib/neo4j/logs
+      - neo4j_plugins:/var/lib/neo4j/plugins
+    env_file:
+      - ./neo4j/.env.neo4j
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - "zookeeper-volume:/confluentinc"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    volumes:
+      - "kafka-volume:/confluentinc"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  spark-master:
+    image: bitnami/spark:3
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+      SPARK_LOG_LEVEL: INFO
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+
+  spark-worker:
+    image: bitnami/spark:3
+    environment:
+      SPARK_MODE: worker
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 1g
+      SPARK_WORKER_CORES: 1
+      SPARK_LOG_LEVEL: INFO
+    ports:
+      - "8081:8081"
+    depends_on:
+      - spark-master
+
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_plugins:
+  kafka-volume:
+  zookeeper-volume:
+  spark_checkpoints:
