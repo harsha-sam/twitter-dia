@@ -1,9 +1,10 @@
+import os
 import re
+import uuid
+import socket
 from flask import Flask, request, jsonify, json
 from confluent_kafka import Producer
-import socket
 from neo4j import GraphDatabase
-import uuid
 
 app = Flask(__name__)
 
@@ -15,13 +16,13 @@ def acked(err, msg):
 
 
 # Neo4j connection details
-uri = "neo4j://neo4j_db:7687"
-user = "neo4j"
-password = "zpv@ntu7WAY6paq3nbe"
+uri = os.getenv('NEO4JDB_URI')
+user = os.getenv('NEO4JDB_USER')
+password = os.getenv('NEO4JDB_PASSWORD')
 db_driver = GraphDatabase.driver(uri, auth=(user, password))
 
 conf = {
-    'bootstrap.servers': "kafka-1:19092,kafka-2:19093,kafka-3:19094",
+    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
     'client.id': socket.gethostname()
 }
 producer = Producer(conf)
@@ -134,4 +135,4 @@ def fetch_recommendations(tx, screen_name):
     return result.single()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.getenv('FLASK_DEBUG'), port=os.getenv('FLASK_PORT'))

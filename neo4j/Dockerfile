@@ -1,7 +1,7 @@
 FROM neo4j:5.19-community-bullseye
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY db-init.sh /db-init.sh
 
-RUN chmod +x /docker-entrypoint.sh
+RUN chmod +x /db-init.sh
 
-CMD ["/docker-entrypoint.sh"]
+CMD ["/db-init.sh"]

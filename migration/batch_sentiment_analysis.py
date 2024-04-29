@@ -1,6 +1,6 @@
+import os
 from textblob import TextBlob
 from neo4j import GraphDatabase
-
 
 class SentimentUpdater:
     def __init__(self, uri, user, password):
@@ -64,9 +64,9 @@ class SentimentUpdater:
 
 
 # Neo4j connection details
-uri = "neo4j://neo4j_db:7687"
-user = "neo4j"
-password = "zpv@ntu7WAY6paq3nbe"
+uri = os.getenv('NEO4JDB_URI')
+user = os.getenv('NEO4JDB_USER')
+password = os.getenv('NEO4JDB_PASSWORD')
 
 # Create a new instance of the sentiment updater and run it
 sentiment_updater = SentimentUpdater(uri, user, password)

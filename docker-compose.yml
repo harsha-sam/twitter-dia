@@ -7,19 +7,19 @@ services:
     ports:
       - "7474:7474" # HTTP
       - "7687:7687" # Bolt
+    env_file:
+      - ./.env.dev
     volumes:
       - ./neo4j/conf:/var/lib/neo4j/conf
       - ./neo4j/import:/var/lib/neo4j/import
       - neo4j_data:/var/lib/neo4j/data
       - neo4j_logs:/var/lib/neo4j/logs
       - neo4j_plugins:/var/lib/neo4j/plugins
-    env_file:
-      - ./neo4j/.env.neo4j
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7687/dbms/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 5m
   
   migration:
     build:
@@ -28,6 +28,8 @@ services:
     depends_on:
       neo4j_db:
         condition: service_healthy
+    env_file:
+      - ./.env.dev
   
   zookeeper-1:
     image: confluentinc/cp-zookeeper:latest
@@ -154,6 +156,8 @@ services:
         condition: service_healthy
       kafka-3:
         condition: service_healthy
+    env_file:
+      - ./.env.dev
   
   spark-master:
     image: bitnami/spark:3
@@ -229,6 +233,8 @@ services:
         condition: service_healthy
       spark-worker-2:
         condition: service_healthy
+    env_file:
+      - ./.env.dev
   
   sentiment-consumer-service:
     build:
@@ -243,6 +249,8 @@ services:
         condition: service_healthy
       neo4j_db:
         condition: service_healthy
+    env_file:
+      - ./.env.dev
 
         
 volumes:

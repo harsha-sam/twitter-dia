@@ -1,3 +1,4 @@
+import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf, from_json, to_json, struct
 from pyspark.sql.types import StringType, StructType, StructField
@@ -28,7 +29,7 @@ schema = StructType([
 raw_df = spark \
     .readStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafka-1:19092,kafka-2:19093,kafka-3:19094") \
+    .option("kafka.bootstrap.servers", os.getenv("KAFKA_BOOTSTRAP_SERVERS")) \
     .option("subscribe", "RAW") \
     .option("failOnDataLoss", "false") \
     .load() \
@@ -54,7 +55,7 @@ output_df = sentiment_df.select(
 kafka_query = output_df \
     .writeStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafka-1:19092,kafka-2:19093,kafka-3:19094") \
+    .option("kafka.bootstrap.servers", os.getenv("KAFKA_BOOTSTRAP_SERVERS")) \
     .option("topic", "SENTIMENT") \
     .option("checkpointLocation", "/tmp/checkpoints") \
     .start()

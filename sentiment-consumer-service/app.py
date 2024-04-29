@@ -1,14 +1,15 @@
+import os
 import re
 import json
+import sys
 from neo4j import GraphDatabase
 from confluent_kafka import Consumer, KafkaError
-import sys
 
 
 # Neo4j connection details
-neo4j_uri = "neo4j://neo4j_db:7687"
-neo4j_user = "neo4j"
-neo4j_password = "zpv@ntu7WAY6paq3nbe"
+neo4j_uri = os.getenv('NEO4JDB_URI')
+neo4j_user = os.getenv('NEO4JDB_USER')
+neo4j_password = os.getenv('NEO4JDB_PASSWORD')
 db_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 
 
@@ -72,8 +73,8 @@ def consume_messages(consumer):
 
 
 kafka_config = {
-    'bootstrap.servers': 'kafka-1:19092,kafka-2:19093,kafka-3:19094',
-    'group.id': 'test-consumer-group',
+    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
+    'group.id': 'sentiment-consumer-group',
     'auto.offset.reset': 'earliest'
 }
 
