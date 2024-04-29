@@ -1,5 +1,4 @@
 Flask
 confluent-kafka
-pyspark
-json
 neo4j
+textblob

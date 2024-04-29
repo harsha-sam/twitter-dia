@@ -1,5 +1,6 @@
-from neo4j import GraphDatabase
 from textblob import TextBlob
+from neo4j import GraphDatabase
+
 
 class SentimentUpdater:
     def __init__(self, uri, user, password):
@@ -14,8 +15,9 @@ class SentimentUpdater:
             tweets = session.read_transaction(self._get_all_tweets)
             for tweet in tweets:
                 sentiment_score = self._analyze_sentiment(tweet['text'])
-                session.write_transaction(self._update_tweet_sentiment, tweet['id'], sentiment_score)
-            
+                session.write_transaction(
+                    self._update_tweet_sentiment, tweet['id'], sentiment_score)
+
             # Update the average sentiment score for Hashtags and Users
             session.write_transaction(self._update_hashtags_avg_sentiment)
             session.write_transaction(self._update_users_avg_sentiment)
@@ -38,7 +40,7 @@ class SentimentUpdater:
     def _update_tweet_sentiment(tx, tweet_id, sentiment_score):
         query = (
             "MATCH (t:Tweet {id: $tweet_id}) "
-            "SET t.sentimentScore = $sentiment_score"
+            "SET t.sentimentScore = toFloat($sentiment_score)"
         )
         tx.run(query, tweet_id=tweet_id, sentiment_score=sentiment_score)
 
@@ -60,8 +62,9 @@ class SentimentUpdater:
         )
         tx.run(query)
 
+
 # Neo4j connection details
-uri = "neo4j://localhost:7687"
+uri = "neo4j://neo4j_db:7687"
 user = "neo4j"
 password = "zpv@ntu7WAY6paq3nbe"
 

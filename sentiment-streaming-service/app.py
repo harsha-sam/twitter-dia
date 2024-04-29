@@ -9,7 +9,7 @@ kafka_package = f"org.apache.spark:spark-sql-kafka-0-10_2.12:{spark_version}"
 def analyze_sentiment(text):
     if text is None or text.strip() == "":
         return None  # Or return a default sentiment value, e.g., 0.0
-    return str(TextBlob(text).sentiment.polarity)
+    return TextBlob(text).sentiment.polarity
 
 analyze_sentiment_udf = udf(analyze_sentiment, StringType())
 
@@ -21,13 +21,14 @@ spark = SparkSession \
 
 schema = StructType([
     StructField("tweet", StringType()),
+    StructField("tweet_id", StringType()),
     StructField("user_id", StringType())
 ])
 
 raw_df = spark \
     .readStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("kafka.bootstrap.servers", "kafka-1:19092,kafka-2:19093,kafka-3:19094") \
     .option("subscribe", "RAW") \
     .option("failOnDataLoss", "false") \
     .load() \
@@ -44,6 +45,7 @@ sentiment_df = data_df.withColumn("sentiment", analyze_sentiment_udf(col("tweet"
 output_df = sentiment_df.select(
     to_json(struct(
         col("user_id"),
+        col("tweet_id"),
         col("tweet"),
         col("sentiment")
     )).alias("value")
@@ -52,7 +54,7 @@ output_df = sentiment_df.select(
 kafka_query = output_df \
     .writeStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("kafka.bootstrap.servers", "kafka-1:19092,kafka-2:19093,kafka-3:19094") \
     .option("topic", "SENTIMENT") \
     .option("checkpointLocation", "/tmp/checkpoints") \
     .start()
