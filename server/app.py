@@ -81,8 +81,9 @@ def post_tweet():
 
     message = json.dumps(
         {'tweet': tweet_text, 'user_id': user_id, 'tweet_id': tweet_id})
+    partition_key = user_id[0].lower()
     # Stream the tweet to Kafka on the topic 'RAW'
-    producer.produce('RAW', message.encode('utf-8'), callback=acked)
+    producer.produce('RAW', key=partition_key, value=message.encode('utf-8'), callback=acked)
     producer.flush()
 
     return jsonify({
@@ -109,7 +110,6 @@ def add_tweet_to_neo4j(tx, screen_name, tweet, hashtags):
         """
     query += "RETURN tweet.id AS tweet_id"
     return tx.run(query, screen_name=screen_name, tweet_id=tweet_id, tweet=tweet, hashtags=hashtags).single()
-
 
 def fetch_recommendations(tx, screen_name):
     query = """

@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 services:
   neo4j_db:
     build:
@@ -16,10 +16,10 @@ services:
       - neo4j_logs:/var/lib/neo4j/logs
       - neo4j_plugins:/var/lib/neo4j/plugins
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      test: wget http://localhost:7474 || exit 1
       timeout: 10s
       retries: 3
-      start_period: 5m
+      start_period: 3m
   
   migration:
     build:
@@ -90,6 +90,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    restart: always
 
   kafka-2:
     image: confluentinc/cp-kafka:latest
@@ -114,6 +115,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    restart: always
 
   kafka-3:
     image: confluentinc/cp-kafka:latest
@@ -138,6 +140,21 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    restart: always
+  
+  kafka-init:
+    build:
+      context: ./kafka-init
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.dev
+    depends_on:
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+      kafka-3:
+        condition: service_healthy
   
   flask-server:
     build:
@@ -146,16 +163,12 @@ services:
     ports:
       - "4000:4000"
     depends_on:
+      kafka-init:
+        condition: service_completed_successfully
       neo4j_db:
         condition: service_healthy
       migration:
         condition: service_completed_successfully
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy
     env_file:
       - ./.env.dev
   
@@ -221,12 +234,8 @@ services:
       context: ./sentiment-streaming-service
       dockerfile: Dockerfile
     depends_on:
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       spark-master:
         condition: service_healthy
       spark-worker-1:
@@ -241,18 +250,56 @@ services:
       context: ./sentiment-consumer-service
       dockerfile: Dockerfile
     depends_on:
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       neo4j_db:
         condition: service_healthy
     env_file:
       - ./.env.dev
+  
+  mongo-1:
+    image: mongo:7.0
+    volumes:
+      - mongo1-data:/data/db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: twitter
+    command: ["mongod", "--replSet", "rs0", "--bind_ip", "0.0.0.0", "--port", "27017"]
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'host.docker.internal:27017',priority:1},{_id:1,host:'host.docker.internal:27018',priority:0.5},{_id:2,host:'host.docker.internal:27019',priority:0.5}]}) }" | mongosh --port 27017 --quiet
+      interval: 5s
+      timeout: 30s
+      start_period: 0s
+      start_interval: 1s
+      retries: 30
 
-        
+  mongo-2:
+    image: mongo:7.0
+    volumes:
+      - mongo2-data:/data/db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: twitter
+    command: ["mongod", "--replSet", "rs0", "--bind_ip", "0.0.0.0", "--port", "27017"]
+
+  mongo-3:
+    image: mongo:7.0
+    volumes:
+      - mongo3-data:/data/db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_DATABASE: twitter
+    command: ["mongod", "--replSet", "rs0", "--bind_ip", "0.0.0.0", "--port", "27017"]
+
 volumes:
   neo4j_data:
   neo4j_logs:
@@ -267,3 +314,6 @@ volumes:
   kafka1-data:
   kafka2-data:
   kafka3-data:
+  mongo1-data:
+  mongo2-data:
+  mongo3-data:
