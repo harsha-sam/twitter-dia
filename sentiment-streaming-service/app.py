@@ -23,7 +23,7 @@ spark = SparkSession \
 schema = StructType([
     StructField("tweet", StringType()),
     StructField("tweet_id", StringType()),
-    StructField("user_id", StringType())
+    StructField("username", StringType())
 ])
 
 raw_df = spark \
@@ -45,7 +45,7 @@ sentiment_df = data_df.withColumn("sentiment", analyze_sentiment_udf(col("tweet"
 # Create a JSON structure to send to Kafka
 output_df = sentiment_df.select(
     to_json(struct(
-        col("user_id"),
+        col("username"),
         col("tweet_id"),
         col("tweet"),
         col("sentiment")

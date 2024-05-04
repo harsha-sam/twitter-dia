@@ -79,13 +79,13 @@ def fetch_and_update_users():
 
 def fetch_and_update_tweets():
     with neo4j_driver.session() as session:
-        tweet_query = "MATCH (tweet:Tweet)<-[:POSTS]-(user:User) RETURN tweet, user.screen_name AS user_id"
+        tweet_query = "MATCH (tweet:Tweet)<-[:POSTS]-(user:User) RETURN tweet, user.screen_name AS username"
         result = session.run(tweet_query)
         for record in result:
             record = record.data()
             tweet = record["tweet"]
             tweet["created_at"] = convert_neo4j_datetime(tweet["created_at"])
-            tweet["user_id"] = record["user_id"]
+            tweet["username"] = record["username"]
             mongo_tweets.insert_one(tweet)
 
 def main():

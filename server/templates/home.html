@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</head>
+<body>
+    <h2>Welcome, {{ username }}!</h2>
+    <form id="tweetForm" action="/api/tweet" method="post">
+        <textarea name="tweet" placeholder="What's happening?" required></textarea><br>
+        <button type="submit">Tweet</button>
+    </form>
+    {% if tweetId %}
+    <div>
+        <p>Posted tweet. Here's the tweet id {{ tweetId }}</p>
+    </div>
+    {% if recommendations %}
+    <div>
+        <h2>Recommendations</h2>
+        <h3>Hashtags to Explore</h3>
+        <ul>
+            {% for hashtag in recommendations.hashtags %}
+            <li>#{{ hashtag }}</li>
+            {% endfor %}
+        </ul>
+        <h3>Users to Follow</h3>
+        <ul>
+            {% for user in recommendations.users %}
+            <li>@{{ user }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    <a href="/logout">Logout</a>
+</body>
+</html>

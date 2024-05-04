@@ -13,7 +13,7 @@ neo4j_password = os.getenv('NEO4JDB_PASSWORD')
 db_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 
 
-def update_neo4j(tweet_id, sentiment_score, hashtags):
+def update_neo4j(tweet_id, sentiment_score, hashtags, username):
     with db_driver.session() as session:
         # Update the tweet's sentiment score
         session.run("""
@@ -24,11 +24,11 @@ def update_neo4j(tweet_id, sentiment_score, hashtags):
         
         # Update average sentiment score for user
         session.run("""
-            MATCH (user:User)-[:POSTS]->(tweet:Tweet)
+            MATCH (user:User {screen_name: $username})-[:POSTS]->(tweet:Tweet)
             WHERE tweet.sentimentScore IS NOT NULL
             WITH user, avg(tweet.sentimentScore) AS avgSentiment
             SET user.avgSentimentScore = avgSentiment
-        """)
+        """, username=username)
 
         # Update average sentiment score for hashtags
         for hashtag in hashtags:
@@ -61,9 +61,10 @@ def consume_messages(consumer):
                 message_data = json.loads(msg.value().decode('utf-8'))
                 tweet_id = message_data.get('tweet_id')
                 sentiment_score = message_data.get('sentiment')
+                username = message_data.get('username')
                 hashtags = re.findall(r"#(\w+)", message_data.get('tweet'))
 
-                update_neo4j(tweet_id, sentiment_score, hashtags)
+                update_neo4j(tweet_id, sentiment_score, hashtags, username)
                 print(f"Processed tweet ID {
                     tweet_id} with sentiment {sentiment_score}")
 
