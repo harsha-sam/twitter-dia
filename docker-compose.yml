@@ -299,6 +299,16 @@ services:
     environment:
       MONGO_INITDB_DATABASE: twitter
     command: ["mongod", "--replSet", "rs0", "--bind_ip", "0.0.0.0", "--port", "27017"]
+  
+  mongo-migration:
+    build:
+      context: ./mongo-migration
+      dockerfile: Dockerfile
+    depends_on:
+      neo4j_db:
+        condition: service_healthy
+    env_file:
+      - ./.env.dev
 
 volumes:
   neo4j_data:

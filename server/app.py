@@ -2,11 +2,22 @@ import os
 import re
 import uuid
 import socket
+import datetime
+import jwt
+import bcrypt
 from flask import Flask, request, jsonify, json
 from confluent_kafka import Producer
+from bson.objectid import ObjectId
+from pymongo import MongoClient
 from neo4j import GraphDatabase
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+client = MongoClient(os.getenv('MONGO_URI'))
+db = client['twitter']
+users = db['users']
+tweets = db['tweets']
+
 
 def acked(err, msg):
     if err is not None:
@@ -30,6 +41,31 @@ producer = Producer(conf)
 @app.route('/')
 def hello():
     return 'Hello, World!'
+
+@app.route('/signin', methods=['POST'])
+def signin():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+
+    user = users.find_one({'screen_name': username})
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    if bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+        # Create a token
+        payload = {
+            'user_id': str(user['screen_name']),
+            # Token expires in 1 hour
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        }
+        token = jwt.encode(
+            payload, app.config['SECRET_KEY'], algorithm='HS256')
+        return jsonify({'token': token}), 200
+
+    else:
+        return jsonify({'error': 'Invalid credentials'}), 401
 
 def fetch_recommendations(tx, screen_name):
     query = """
@@ -56,17 +92,24 @@ def fetch_recommendations(tx, screen_name):
 
 @app.route('/tweet', methods=['POST'])
 def post_tweet():
-    data = request.json
-    tweet_text = data.get('tweet')
-    user_id = data.get('user_id')
-    if not tweet_text or not user_id:
-        return jsonify({'error': 'Tweet text or User ID is missing'}), 400
-    
-    # Extract hashtags using a regular expression
-    hashtags = re.findall(r"#(\w+)", tweet_text)
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'error': 'Authorization token required'}), 400
 
-    # Add to Neo4j database
     try:
+        data = request.json
+        tweet_text = data.get('tweet')
+        if not tweet_text:
+            return jsonify({'error': 'Tweet text is missing'}), 400
+        
+        # Extract hashtags using a regular expression
+        hashtags = re.findall(r"#(\w+)", tweet_text)
+
+        data = jwt.decode(
+            token, app.config['SECRET_KEY'], algorithms=['HS256'])
+
+        user_id = data['user_id']
+
         with db_driver.session() as session:
             result = session.write_transaction(
                 add_tweet_to_neo4j, user_id, tweet_text, hashtags)
@@ -76,6 +119,10 @@ def post_tweet():
                 fetch_recommendations, user_id)
             user_recommendations = recommendations['similarUsers']
             hashtag_recommendations = recommendations['similarHashtags']
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

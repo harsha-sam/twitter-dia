@@ -2,3 +2,6 @@ Flask
 confluent-kafka
 neo4j
 textblob
+pymongo
+PyJWT
+bcrypt

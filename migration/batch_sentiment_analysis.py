@@ -27,7 +27,7 @@ class SentimentUpdater:
         # Retrieve all tweets that do not have a sentiment score
         query = (
             "MATCH (t:Tweet) "
-            "WHERE t.text IS NOT NULL AND t.sentimentScore IS NULL"
+            "WHERE t.text IS NOT NULL AND t.sentimentScore IS NULL "
             "RETURN t.id AS id, t.text AS text"
         )
         return list(tx.run(query))
