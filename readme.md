@@ -30,7 +30,9 @@ Ensure you have Docker and docker-compose installed on your machine. Navigate to
 
 
 This command will set up all the necessary services and start the application.
+
 `docker-compose up --build`
+
 ## Usage
 
 Once the application is running, navigate to `http://localhost:4000` in your web browser to access the web interface.
