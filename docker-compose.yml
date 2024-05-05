@@ -307,6 +307,8 @@ services:
     depends_on:
       neo4j_db:
         condition: service_healthy
+      migration:
+        condition: service_completed_successfully
     env_file:
       - ./.env.dev
 

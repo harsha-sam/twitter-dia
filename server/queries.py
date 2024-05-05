@@ -18,11 +18,15 @@ def add_tweet_to_neo4j(tx, screen_name, tweet, hashtags, mentions):
         query += """
         WITH tweet, $mentions AS usertags
         UNWIND usertags AS userTag
-        MATCH (mentionedUser:User {screen_name: userTag})
-        MERGE (tweet)-[:MENTIONS]->(mentionedUser)
+        OPTIONAL MATCH (mentionedUser:User {screen_name: userTag}) 
+        WITH tweet, collect(mentionedUser) AS mentionedUsers
+        UNWIND mentionedUsers AS validUser
+        WITH tweet, validUser
+        WHERE validUser IS NOT NULL
+        MERGE (tweet)-[:MENTIONS]->(validUser)
         """
-    query += "RETURN tweet"
-    return tx.run(query, screen_name=screen_name, tweet_id=tweet_id, tweet=tweet, hashtags=hashtags).single()
+    query += "RETURN tweet AS tweet"
+    return tx.run(query, screen_name=screen_name, tweet_id=tweet_id, tweet=tweet, hashtags=hashtags, mentions=mentions).single()
 
 
 def fetch_recommendations(tx, screen_name):

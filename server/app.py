@@ -15,7 +15,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 neo4jdb_uri = os.getenv('NEO4JDB_URI')
 neo4jdb_user = os.getenv('NEO4JDB_USER')
 neo4jdb_password = os.getenv('NEO4JDB_PASSWORD')
-neo4jdb_driver = GraphDatabase.driver(neo4jdb_uri, auth=(neo4jdb_uri, neo4jdb_password))
+neo4jdb_driver = GraphDatabase.driver(neo4jdb_uri, auth=(neo4jdb_user, neo4jdb_password))
 
 mongo_client = MongoClient(os.getenv('MONGO_URI'))
 mongo_db = mongo_client['twitter']
@@ -58,8 +58,8 @@ def hello():
 
 @app.route('/api/login', methods=['POST'])
 def signin():
-    username = request.json.get('username')
-    password = request.json.get('password')
+    username = request.form['username']
+    password = request.form['password']
     if not username or not password:
         return jsonify({'error': 'Username and password required'}), 400
 
@@ -95,9 +95,11 @@ def post_tweet():
             hashtag_recommendations = recommendations['similarHashtags']
         
         # adding tweet to mongo
-        tweet["created_at"] = convert_neo4j_datetime(tweet["created_at"])
-        tweet["username"] = screen_name
-        mongoc_tweets.insert_one(tweet)
+        mongoc_tweets.insert_one({
+            "username": screen_name,
+            "created_at": convert_neo4j_datetime(tweet["created_at"]),
+            "text": tweet_text
+        })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
